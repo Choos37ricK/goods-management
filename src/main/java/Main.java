@@ -7,6 +7,7 @@ import org.bson.BsonDocument;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 
+import java.util.Arrays;
 import java.util.Scanner;
 
 public class Main {
@@ -40,7 +41,24 @@ public class Main {
             switch (command) {
                 case "статистика_товаров":
                     System.out.println("Общее количество товаров: " + goodsCollection.countDocuments());
-                    System.out.println("Средняя цена товара: " + goodsCollection.;
+
+                    Document avgPrice = goodsCollection.aggregate(Arrays.asList(
+                            new Document("$group", new Document()
+                                    .append("_id", null)
+                                    .append("avgPrice", new Document("$avg", "$price"))))).iterator().next();
+                    System.out.println("Средняя цена товара: " + avgPrice.get("avgPrice"));
+
+                    Document dearestProduct = goodsCollection.find().sort(BsonDocument.parse("{price: -1}")).limit(1).iterator().next();
+                    System.out.println("Самый дорогой товар:");
+                    System.out.println("\tНазвание: " + dearestProduct.get("name"));
+                    System.out.println("\tЦена: " + dearestProduct.get("price"));
+
+                    Document cheapestProduct = goodsCollection.find().sort(BsonDocument.parse("{price: 1}")).limit(1).iterator().next();
+                    System.out.println("Самый дешевый товар:");
+                    System.out.println("\tНазвание: " + cheapestProduct.get("name"));
+                    System.out.println("\tЦена: " + cheapestProduct.get("price"));
+
+                    System.out.println("Количество товаров дешевле 100 рублей: " + goodsCollection.countDocuments(BsonDocument.parse("{price: {$lt: 100}}")));
                     break;
                 case "добавить_магазин":
                     Document shop = new Document().append("name", commandParts[1]);
@@ -50,7 +68,7 @@ public class Main {
                 case "добавить_товар":
                     Document product = new Document()
                             .append("name", commandParts[1])
-                            .append("price", commandParts[2]);
+                            .append("price", Integer.parseInt(commandParts[2]));
                     goodsCollection.insertOne(product);
                     System.out.println("Товар добавлен:\n" + goodsCollection.find(product).iterator().next().toJson());
                     break;
